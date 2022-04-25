@@ -4,6 +4,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.MessageDigest;
+import java.security.DigestInputStream;
 import java.security.NoSuchAlgorithmException;
 
 public class JCheckHash {
@@ -13,14 +14,21 @@ public class JCheckHash {
     public static void main(String[] args) throws FileNotFoundException, NoSuchAlgorithmException, IOException {
         Arguments a = readArgs(args);
 
-        FileInputStream stream = new FileInputStream(a.f);
-        byte[] raw = new byte[(int) a.f.length()];
-        stream.read(raw);
-        stream.close();
         MessageDigest md = MessageDigest.getInstance(a.algorithm);
-        byte[] digest = md.digest(raw);
+        FileInputStream stream = new FileInputStream(a.f);
+        DigestInputStream dstream = new DigestInputStream(stream, md);
 
+        {
+            byte[] buffer = new byte[1 << 28];
+            for (int read = dstream.read(buffer); read != -1; read = dstream.read(buffer))
+                ;
+        }
+
+        byte[] digest = dstream.getMessageDigest().digest();
         BigInteger hash = new BigInteger(1, digest);
+
+        dstream.close();
+        stream.close();
 
         System.out.println("File Hash: " + hash.toString(16));
         if (a.verify != null) {
